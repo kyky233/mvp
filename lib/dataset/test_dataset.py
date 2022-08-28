@@ -41,9 +41,9 @@ def _get_cam(seq):
             sel_cam = dict()
             sel_cam['K'] = np.array(cam['matrix'])
             sel_cam['distCoef'] = np.array(cam['distortions'])
-            # sel_cam['R'] = np.array(cam['R']).dot(M)
-            sel_cam['R'] = cv2.Rodrigues(np.array(cam['rotation']))[0].dot(M)
-            sel_cam['t'] = np.array(cam['translation']).reshape((3, 1))
+            # sel_cam['R'] = cv2.Rodrigues(np.array(cam['rotation']))[0].dot(M)
+            sel_cam['R'] = cv2.Rodrigues(np.array(cam['rotation']))[0]  # rotation vector to rotation matrix
+            sel_cam['t'] = np.array(cam['translation']).reshape((3, 1))    # cm to mm
             cameras[cam['name']] = sel_cam
     return cameras
 
@@ -74,17 +74,6 @@ def _get_db():
                 #     continue
 
                 for k, v in cameras.items():
-                    # get each cam
-                    our_cam = dict()
-                    our_cam['R'] = v['R']
-                    our_cam['T'] = -np.dot(v['R'].T, v['t']) * 10.0  # cm to mm
-                    our_cam['fx'] = np.array(v['K'][0, 0])
-                    our_cam['fy'] = np.array(v['K'][1, 1])
-                    our_cam['cx'] = np.array(v['K'][0, 2])
-                    our_cam['cy'] = np.array(v['K'][1, 2])
-                    our_cam['k'] = v['distCoef'][[0, 1, 2]].reshape(3, 1)
-                    our_cam['p'] = v['distCoef'][[3, 4]].reshape(2, 1)
-
                     # get image
                     img_path = os.path.join(img_dir, k, _get_img_name(idx))
 
@@ -93,7 +82,7 @@ def _get_db():
                     all_poses_vis_3d = []
                     all_poses = []
                     all_poses_vis = []
-                    # fake pose
+                    # fake pose (assume one person in each image)
                     pose3d = np.zeros(shape=[num_joints, 3])
                     all_poses_3d.append(pose3d)
                     pose3d_vis = pose3d
@@ -102,6 +91,18 @@ def _get_db():
                     all_poses.append(pose2d)
                     pose2d_vis = pose2d
                     all_poses_vis.append(pose2d_vis)
+
+                    # get each cam
+                    our_cam = dict()
+                    our_cam['R'] = v['R']
+                    our_cam['T'] = v['t']
+                    our_cam['standard_T'] = -np.dot(v['R'], v['t'])
+                    our_cam['fx'] = np.array(v['K'][0, 0])
+                    our_cam['fy'] = np.array(v['K'][1, 1])
+                    our_cam['cx'] = np.array(v['K'][0, 2])
+                    our_cam['cy'] = np.array(v['K'][1, 2])
+                    our_cam['k'] = v['distCoef'][[0, 1, 2]].reshape(3, 1)
+                    our_cam['p'] = v['distCoef'][[3, 4]].reshape(2, 1)
 
                     db.append({
                         'key': "{}_{}-{}".format(seq, k, _get_img_name(idx).split('.')[0]),
@@ -238,21 +239,28 @@ def main():
 
     idx = 0
 
-    # # show db by idx
-    # db_rec = copy.deepcopy(db[idx])
-    # show_db_item(db_rec=db_rec)
-    # print(f"{idx}th rec has been showed!")
+    vis_db_item = False
+    vis_single_group_db = True
+    vis_several_groups_db = False
 
-    # # show group db by idx
-    # db_group_rec = _get_group_item(db=db, idx=idx)
-    # show_db_single_group(db_group_rec=db_group_rec)
-    # print(f"{idx}th group recs has been showed!")
+    '''-----------show db by idx--------------'''
+    if vis_db_item:
+        db_rec = copy.deepcopy(db[idx])
+        show_db_item(db_rec=db_rec)
+        print(f"{idx}th rec has been showed!")
 
-    # show several groups db rec
-    num_groups = 7
-    group_intervals = 500
-    show_db_groups(db=db, num_groups=num_groups, group_intervals=group_intervals, idx=idx)
-    print(f"{idx}th~{idx+num_groups}th group recs have been showed!")
+    '''-----------show group db by idx-------------'''
+    if vis_single_group_db:
+        db_group_rec = _get_group_item(db=db, idx=idx)
+        show_db_single_group(db_group_rec=db_group_rec)
+        print(f"{idx}th group recs has been showed!")
+
+    '''-------------------show several groups db rec-------------------'''
+    if vis_several_groups_db:
+        num_groups = 7
+        group_intervals = 500
+        show_db_groups(db=db, num_groups=num_groups, group_intervals=group_intervals, idx=idx)
+        print(f"{idx}th~{idx+num_groups}th group recs have been showed!")
 
     print(f"this is the end!")
 
