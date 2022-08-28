@@ -186,8 +186,8 @@ def show_db_single_group(db_group_rec):
     # show group data
     for i in range(num_views):
         print(f"key of this rec = {keys[i]}")
-        print(f"camera = {cameras[i]}")
         print(f"image = {images[i]}")
+        print(f"camera = {cameras[i]}")
 
     fig = plt.figure(figsize=(1, num_views))
     for i in range(num_views):
@@ -221,6 +221,7 @@ def show_db_groups(db, num_groups, group_intervals, idx):
     for i in range(num_groups):
         print(f"key of db[{idx + i*group_intervals}] = {keys[i]}")
         print(f"image of db[{idx + i*group_intervals}]= {images[i]}")
+        print(f"camera of db[{idx + i*group_intervals}]= {cameras[i]}")
 
     fig = plt.figure()
     for i in range(num_groups):
