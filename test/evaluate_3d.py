@@ -28,6 +28,7 @@ import torchvision.transforms as transforms
 import argparse
 import os
 import pprint
+from tqdm import tqdm
 
 from core.config import config
 from core.config import update_config
@@ -51,11 +52,11 @@ def parse_args():
                         help='device to use for training / testing')
     parser.add_argument('--seed', default=42, type=int)
     # distributed training parameters
-    parser.add_argument('--world_size', default=1, type=int,
-                        help='number of distributed processes')
-    parser.add_argument('--dist_url', default='env://',
-                        help='url used to set up distributed training')
-    parser.add_argument('--weight_decay', default=1e-4, type=float)
+    # parser.add_argument('--world_size', default=1, type=int,
+    #                     help='number of distributed processes')
+    # parser.add_argument('--dist_url', default='env://',
+    #                     help='url used to set up distributed training')
+    # parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--model_path', default=None, type=str,
                         help='pass model path for evaluation')
 
@@ -71,12 +72,8 @@ def main():
         config, args.cfg, 'validate')
     device = torch.device(args.device)
 
-    utils.init_distributed_mode(args)
-    print("git:\n  {}\n".format(utils.get_sha()))
-
-    if is_main_process():
-        logger.info(pprint.pformat(args))
-        logger.info(pprint.pformat(config))
+    logger.info(pprint.pformat(args))
+    logger.info(pprint.pformat(config))
 
     print('=> Loading data ..')
     normalize = transforms.Normalize(
@@ -89,17 +86,9 @@ def main():
             normalize,
         ]))
 
-    if args.distributed:
-        rank, world_size = get_dist_info()
-        sampler_val = DistributedSampler(test_dataset, world_size, rank,
-                                         shuffle=False)
-    else:
-        sampler_val = torch.utils.data.SequentialSampler(test_dataset)
-
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=config.TEST.BATCH_SIZE,
-        sampler=sampler_val,
         pin_memory=True,
         num_workers=config.WORKERS)
 
@@ -113,11 +102,6 @@ def main():
     model = eval('models.' + 'multi_view_pose_transformer' + '.get_mvp')(
         config, is_train=True)
     model.to(device)
-    # with torch.no_grad():
-    #     model = torch.nn.DataParallel(model, device_ids=0).cuda()
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(
-            model, device_ids=[args.gpu], find_unused_parameters=True)
 
     if args.model_path is not None:
         logger.info('=> load models state {}'.format(args.model_path))
@@ -131,23 +115,21 @@ def main():
     else:
         raise ValueError('Check the model file for testing!')
 
-    for thr in config.DECODER.inference_conf_thr:
-        preds_single, meta_image_files_single = validate_3d(
-            config, model, test_loader, final_output_dir, thr,
-            num_views=num_views)
-        preds = collect_results(preds_single, len(test_dataset))
+    model.eval()
+    preds = []
+    with torch.no_grad():
+        for i, (inputs, meta)in enumerate(tqdm(test_loader)):
+            pred = model(views=inputs, meta=meta)   # {'pred_logits': outputs_classes[-1], 'pred_poses': outputs_coords[-1]}
 
-        # if is_main_process():
-        #     actor_pcp, avg_pcp, _, recall = test_loader.dataset.evaluate(preds)
-        #     msg = '     | Actor 1 | Actor 2 | Actor 3 | Average | \n' \
-        #           ' PCP |  {pcp_1:.2f}  |  {pcp_2:.2f}  |  {pcp_3:.2f}  ' \
-        #           '|  {pcp_avg:.2f}  |\t Recall@500mm: {recall:.4f}'.\
-        #         format(pcp_1=actor_pcp[0] * 100,
-        #                pcp_2=actor_pcp[1] * 100,
-        #                pcp_3=actor_pcp[2] * 100,
-        #                pcp_avg=avg_pcp * 100,
-        #                recall=recall)
-        #     logger.info(msg)
+            # recollect results
+            pred_poses = pred['pred_poses']
+            pred_logits = pred['pred_logits']
+
+            print(f"shape of pred_poses = {pred_poses.shape}")
+            print(f"shape of pred_logits = {pred_logits.shape}")
+
+            if i == 1:
+                break
 
 
 if __name__ == '__main__':
