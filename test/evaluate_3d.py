@@ -52,12 +52,12 @@ def parse_args():
                         help='device to use for training / testing')
     parser.add_argument('--seed', default=42, type=int)
     # distributed training parameters
-    # parser.add_argument('--world_size', default=1, type=int,
-    #                     help='number of distributed processes')
-    # parser.add_argument('--dist_url', default='env://',
-    #                     help='url used to set up distributed training')
+    parser.add_argument('--world_size', default=1, type=int,
+                        help='number of distributed processes')
+    parser.add_argument('--dist_url', default='env://',
+                        help='url used to set up distributed training')
     # parser.add_argument('--weight_decay', default=1e-4, type=float)
-    parser.add_argument('--model_path', default=None, type=str,
+    parser.add_argument('--model_path', default='models/model_best_5view.pth.tar', type=str,
                         help='pass model path for evaluation')
 
     args, rest = parser.parse_known_args()
@@ -72,8 +72,12 @@ def main():
         config, args.cfg, 'validate')
     device = torch.device(args.device)
 
-    logger.info(pprint.pformat(args))
-    logger.info(pprint.pformat(config))
+    utils.init_distributed_mode(args)
+    print("git:\n  {}\n".format(utils.get_sha()))
+
+    if is_main_process():
+        logger.info(pprint.pformat(args))
+        logger.info(pprint.pformat(config))
 
     print('=> Loading data ..')
     normalize = transforms.Normalize(
@@ -86,9 +90,17 @@ def main():
             normalize,
         ]))
 
+    if args.distributed:
+        rank, world_size = get_dist_info()
+        sampler_val = DistributedSampler(test_dataset, world_size, rank,
+                                         shuffle=False)
+    else:
+        sampler_val = torch.utils.data.SequentialSampler(test_dataset)
+
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=config.TEST.BATCH_SIZE,
+        sampler=sampler_val,
         pin_memory=True,
         num_workers=config.WORKERS)
 
@@ -102,6 +114,11 @@ def main():
     model = eval('models.' + 'multi_view_pose_transformer' + '.get_mvp')(
         config, is_train=True)
     model.to(device)
+    # with torch.no_grad():
+    #     model = torch.nn.DataParallel(model, device_ids=0).cuda()
+    if args.distributed:
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[args.gpu], find_unused_parameters=True)
 
     if args.model_path is not None:
         logger.info('=> load models state {}'.format(args.model_path))
