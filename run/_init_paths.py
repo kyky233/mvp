@@ -34,3 +34,7 @@ this_dir = osp.dirname(__file__)
 
 lib_path = osp.join(this_dir, '..', 'lib')
 add_path(lib_path)
+
+# ydq   --- to solve 'no model named lib'
+lib_path = osp.join(this_dir, '..')
+add_path(lib_path)
