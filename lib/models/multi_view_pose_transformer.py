@@ -299,8 +299,6 @@ class MultiviewPosetransformer(nn.Module):
             all_feats = all_feats[::-1]
         batch, _, imageh, imagew = views[0].shape
         nview = len(views)
-        import pdb
-        pdb.set_trace()
 
         cam_R = torch.stack([m['camera_R'] for m in meta], dim=1)
         cam_T = torch.stack([m['camera_standard_T'] for m in meta], dim=1)
