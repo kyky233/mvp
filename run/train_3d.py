@@ -44,7 +44,8 @@ from utils.utils import load_backbone_panoptic
 from getpass import getuser
 from socket import gethostname
 
-import lib.utils.misc as utils
+# import lib.utils.misc as utils
+import utils.misc as utils
 import numpy as np
 import random
 from torch.utils.data import DistributedSampler
