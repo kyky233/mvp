@@ -27,7 +27,8 @@ import os
 # from collections import OrderedDict
 
 from dataset.JointsDataset import JointsDataset
-from lib.utils.cameras_cpu import camera_to_world_frame, project_pose
+# from lib.utils.cameras_cpu import camera_to_world_frame, project_pose
+from utils.cameras_cpu import camera_to_world_frame, project_pose
 # import cv2
 
 INF = 1e8
