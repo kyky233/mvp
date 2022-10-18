@@ -558,7 +558,7 @@ def interpolate(input, size=None,
     class can go away.
     """
     # if float(torchvision.__version__[:3]) < 0.7:
-    if float(torchvision.version.split('.')[1]) < 7:
+    if float(torchvision.__version__.split('.')[1]) < 7:
         if input.numel() > 0:
             return torch.nn.functional.interpolate(
                 input, size, scale_factor, mode, align_corners
@@ -567,7 +567,7 @@ def interpolate(input, size=None,
         output_shape = _output_size(2, input, size, scale_factor)
         output_shape = list(input.shape[:-2]) + list(output_shape)
         # if float(torchvision.__version__[:3]) < 0.5:
-        if float(torchvision.version.split('.')[1]) < 5:
+        if float(torchvision.__version__.split('.')[1]) < 5:
             return _NewEmptyTensorOp.apply(input, output_shape)
         return _new_empty_tensor(input, output_shape)
     else:
