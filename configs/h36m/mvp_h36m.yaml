@@ -26,7 +26,7 @@ DATASET:
   ROOTIDX: 2
   CAMERA_NUM: 4
 NETWORK:
-  PRETRAINED_BACKBONE: ''
+  PRETRAINED_BACKBONE: '' # "models/pose_resnet50_panoptic.pth.tar"
   PRETRAINED:  ''
   TARGET_TYPE: gaussian
   IMAGE_SIZE:
@@ -104,7 +104,7 @@ DECODER:
   return_intermediate_dec: True
   num_instance: 10
   num_keypoints: 15
-  with_box_refine: True
+  with_pose_refine: True
   aux_loss: True
   lr_linear_proj_mult: 0.1
   loss_bbox_normalize: False
