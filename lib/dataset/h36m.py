@@ -217,22 +217,34 @@ class H36M(JointsDataset):
             datum['subject'], datum['action'], datum['subaction'],
             datum['image_id'])
 
+    # def __getitem__(self, idx):
+    #     input, target, weight, target_3d, meta, input_heatmap \
+    #         = [], [], [], [], [], []
+    #     items = self.grouping[idx]
+    #     for item in items:
+    #         i, t, w, t3, m, ih = super().__getitem__(item)
+    #         if i is None:
+    #             continue
+    #         input.append(i)
+    #         target.append(t)
+    #         weight.append(w)
+    #         target_3d.append(t3)
+    #         meta.append(m)
+    #         input_heatmap.append(ih)
+    #
+    #     return input, target, weight, target_3d, meta, input_heatmap
+
     def __getitem__(self, idx):
-        input, target, weight, target_3d, meta, input_heatmap \
-            = [], [], [], [], [], []
+        input, meta = [], []
         items = self.grouping[idx]
         for item in items:
-            i, t, w, t3, m, ih = super().__getitem__(item)
+            i, m = super().__getitem__(item)
             if i is None:
                 continue
             input.append(i)
-            target.append(t)
-            weight.append(w)
-            target_3d.append(t3)
             meta.append(m)
-            input_heatmap.append(ih)
 
-        return input, target, weight, target_3d, meta, input_heatmap
+        return input, meta
 
     def __len__(self):
         return self.group_size
