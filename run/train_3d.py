@@ -29,6 +29,7 @@ import torchvision.transforms as transforms
 import argparse
 import os
 import pprint
+from tensorboardX import SummaryWriter
 
 import _init_paths
 import dataset
@@ -241,11 +242,20 @@ def main():
                        if p.requires_grad)
     print('number of params:', n_parameters)
 
+    if is_main_process():
+        writer_dict = {
+            'writer': SummaryWriter(log_dir=tb_log_dir),
+            'train_global_steps': 0,
+            'valid_global_steps': 0,
+        }
+    else:
+        writer_dict = None
+
     for epoch in range(start_epoch, end_epoch):
         print('Epoch: {}'.format(epoch))
         print('current lr {}'.format(optimizer.param_groups[0]["lr"]))
         train_3d(config, model, optimizer, train_loader, epoch,
-                 final_output_dir, num_views=num_views)
+                 final_output_dir, num_views=num_views, writer_dict=writer_dict)
 
         lr_scheduler.step()
 
@@ -257,6 +267,7 @@ def main():
             preds = collect_results(preds_single, len(test_dataset))
 
             if is_main_process():
+                print(f"this is main process:")
 
                 precision = None
 
@@ -275,6 +286,14 @@ def main():
                     logger.info(tb)
                     logger.info(f'MPJPE: {mpjpe:.2f}mm')
                     precision = np.mean(aps[0])
+
+                    if writer_dict is not None:
+                        writer = writer_dict['writer']
+                        global_steps = writer_dict['train_global_steps']
+                        writer.add_scalar('ap_25', aps[0], global_steps)
+                        writer.add_scalar('ap_50', aps[1], global_steps)
+                        writer.add_scalar('ap_75', aps[2], global_steps)
+                        writer.add_scalar('mpjpe@500mm', mpjpe, global_steps)
 
                 elif 'campus' in config.DATASET.TEST_DATASET \
                         or 'shelf' in config.DATASET.TEST_DATASET:

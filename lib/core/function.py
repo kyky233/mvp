@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 def train_3d(config, model, optimizer, loader, epoch,
-             output_dir, device=torch.device('cuda'), num_views=5):
+             output_dir, device=torch.device('cuda'), num_views=5, writer_dict=None):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     loss_ce = AverageMeter()
@@ -111,6 +111,9 @@ def train_3d(config, model, optimizer, loader, epoch,
         end = time_synchronized()
 
         if i % config.PRINT_FREQ == 0 and is_main_process():
+            # get lr
+            lr = optimizer.param_groups[0]['lr']
+
             gpu_memory_usage = torch.cuda.memory_allocated(0)
             msg = \
                 'Epoch: [{0}][{1}/{2}]\t' \
@@ -128,6 +131,7 @@ def train_3d(config, model, optimizer, loader, epoch,
                 '({loss_pose_perprojection.avg:.6f})\t' \
                 'cardinality_error: {cardinality_error.val:.6f} ' \
                 '({cardinality_error.avg:.6f})\t' \
+                'lr: {lr:.6f}\t' \
                 'Memory {memory:.1f}\t'\
                 'gradnorm {gradnorm:.2f}'.format(
                   epoch, i, len(loader),
@@ -140,9 +144,22 @@ def train_3d(config, model, optimizer, loader, epoch,
                   loss_pose_perbone=loss_pose_perbone,
                   loss_pose_perprojection=loss_pose_perprojection,
                   cardinality_error=cardinality_error,
+                  lr=lr,
                   memory=gpu_memory_usage,
                   gradnorm=grad_total_norm)
             logger.info(msg)
+
+            if writer_dict is not None:
+                writer = writer_dict['writer']
+                global_steps = writer_dict['train_global_steps']
+                writer.add_scalar('train_loss_ce', loss_ce.val, global_steps)
+                writer.add_scalar('train_class_error', class_error.val, global_steps)
+                writer.add_scalar('train_loss_pose_perjoint', loss_pose_perjoint.val, global_steps)
+                writer.add_scalar('train_loss_pose_perbone', loss_pose_perbone.val, global_steps)
+                writer.add_scalar('train_loss_pose_perprojection', loss_pose_perprojection.val, global_steps)
+                writer.add_scalar('train_cardinality_error', cardinality_error.val, global_steps)
+                writer.add_scalar('train_learning_rate', lr, global_steps)
+                writer_dict['train_global_steps'] = global_steps + 1
 
             prefix2 = '{}_{:08}'.format(
                 os.path.join(output_dir, 'train'), i)

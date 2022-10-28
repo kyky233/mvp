@@ -107,7 +107,7 @@ DECODER:
   with_pose_refine: True
   aux_loss: True
   lr_linear_proj_mult: 0.1
-  loss_pose_normalize: False
+#  loss_bbox_normalize: False
   loss_joint_type: 'l1'
   pred_class_fuse: 'mean'
   pred_conf_threshold: 0.5
@@ -115,10 +115,21 @@ DECODER:
   detach_refpoints_cameraprj_firstlayer: True
   fuse_view_feats: 'cat_proj'
   num_views: 4
+
+#  add_posembed_decoder_input: True
   epipolar_encoder: False
+#  voxel_input_detach_input_grad: True
+#  voxel_output_abs_coord: True
+  REGRESS_GRID_SIZE: [600,600,600]
+  REGRESS_CUBE_SIZE: [20,20,20]
+  voxel_regression_type: None
+#  regress_layer: None
 
   optimizer: adam
-#  query_embed_type: perperson_perjoint
-  query_embed_type: person_joint
-  projattn_posembed_mode: use_rayconv
+  lr_decay_epoch: [40,]
+#  employ_multi_level_feat: True
+  query_embed_type: perperson_perjoint
+#  decoder_fuse_src_pos_embed_mode: use_ray_embed_coordconv
+  use_loss_pose_perprojection: True
+#  query_fuse_mode: global_pool
   
